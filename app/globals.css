@@ -80,3 +80,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+.grid.grid-cols-1.md\:grid-cols-3.gap-4.p-4 {
+  padding: 1px;
+}
+

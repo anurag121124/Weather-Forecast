@@ -11,11 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 
-interface LocationSelectorProps {
-  onLocationSelect: (cityName: string) => void;
-}
-
-const LocationSelector: React.FC<LocationSelectorProps> = ({ onLocationSelect }) => {
+const LocationSelector = ({ onLocationSelect }) => {
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [states, setStates] = useState<IState[]>([]);
   const [cities, setCities] = useState<ICity[]>([]);

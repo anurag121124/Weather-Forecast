@@ -11,12 +11,30 @@ import {
 } from "lucide-react";
 
 const getWeatherIcon = (code: number) => {
-  if (code >= 200 && code < 300) return <CloudLightning className="h-12 w-12" />;
-  if (code >= 300 && code < 600) return <CloudRain className="h-12 w-12" />;
-  if (code >= 600 && code < 700) return <CloudSnow className="h-12 w-12" />;
-  if (code === 800) return <Sun className="h-12 w-12" />;
-  if (code > 800) return <Cloudy className="h-12 w-12" />;
-  return <Cloud className="h-12 w-12" />;
+  let Icon;
+  let color;
+
+  if (code >= 200 && code < 300) {
+    Icon = CloudLightning;
+    color = "text-yellow-500"; // Thunderstorm
+  } else if (code >= 300 && code < 600) {
+    Icon = CloudRain;
+    color = "text-blue-500"; // Rain
+  } else if (code >= 600 && code < 700) {
+    Icon = CloudSnow;
+    color = "text-cyan-500"; // Snow
+  } else if (code === 800) {
+    Icon = Sun;
+    color = "text-yellow-400"; // Clear sky
+  } else if (code > 800) {
+    Icon = Cloudy;
+    color = "text-gray-500"; // Cloudy
+  } else {
+    Icon = Cloud;
+    color = "text-gray-400"; // Default
+  }
+
+  return <Icon className={`h-12 w-12 ${color}`} />;
 };
 
 interface Weather {
@@ -49,7 +67,7 @@ export default function WeatherDisplay({ weather, unit }: WeatherDisplayProps) {
   const unitSymbol = unit === "metric" ? "°C" : "°F";
 
   return (
-    <Card className="p-6 bg-white/50 backdrop-blur-lg dark:bg-gray-800/50">
+    <Card className="p-6 dark:bg-gray-800/50">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex items-center space-x-4">
           {getWeatherIcon(weather.weather[0].id)}

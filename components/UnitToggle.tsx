@@ -15,14 +15,22 @@ export function UnitToggle({ unit, setUnit }: UnitToggleProps) {
       <div className="flex rounded-lg overflow-hidden">
         <Button
           variant={unit === "metric" ? "default" : "outline"}
-          className="rounded-none rounded-l-lg"
+          className={`rounded-none rounded-l-lg ${
+            unit === "metric"
+              ? "bg-blue-600 text-white hover:bg-blue-800"
+              : "bg-white text-blue-700 hover:bg-blue-100"
+          }`}
           onClick={() => setUnit("metric")}
         >
           °C
         </Button>
         <Button
           variant={unit === "imperial" ? "default" : "outline"}
-          className="rounded-none rounded-r-lg"
+          className={`rounded-none rounded-r-lg ${
+            unit === "imperial"
+              ? "bg-blue-600 text-white hover:bg-blue-800"
+              : "bg-white text-blue-700 hover:bg-blue-100"
+          }`}
           onClick={() => setUnit("imperial")}
         >
           °F

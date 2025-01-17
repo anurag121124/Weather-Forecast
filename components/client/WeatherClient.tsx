@@ -1,21 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, MapPin, Loader2, Cloud, Droplets } from "lucide-react";
+import { Search, MapPin, Loader2, Cloud, Star, StarOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ForecastDisplay from "../ForecastDisplay";
 import { UnitToggle } from "../UnitToggle";
 import WeatherDisplay from "../WeatherDisplay";
 import LocationSelector from "../LocationSelector";
 import { weatherService } from "@/services/weather.service";
-import { WeatherData } from "@/services/weather.service";
+import { WeatherData, ForecastData } from "@/services/weather.service";
+import { useWeatherStore } from "@/stores/WeatherStore";
 
 interface WeatherClientProps {
   initialWeather: WeatherData;
-  initialForecast: WeatherData;
+  initialForecast: ForecastData;
 }
 
 export default function WeatherClient({
@@ -24,16 +25,50 @@ export default function WeatherClient({
 }: WeatherClientProps) {
   const [location, setLocation] = useState("");
   const [zipcode, setZipcode] = useState("");
-  const [weather, setWeather] = useState(initialWeather);
-  const [forecast, setForecast] = useState(initialForecast);
+  const [weather, setWeather] = useState<WeatherData>(initialWeather);
+  const [forecast, setForecast] = useState<ForecastData>(initialForecast);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [unit, setUnit] = useState<"metric" | "imperial">("metric");
   const { toast } = useToast();
 
+  const { 
+    favorites, 
+    addFavorite, 
+    removeFavorite, 
+    currentWeather,
+    setCurrentWeather 
+  } = useWeatherStore();
+
   useEffect(() => {
     weatherService.updateUnit(unit);
   }, [unit]);
+
+  useEffect(() => {
+    if (weather) {
+      setCurrentWeather(weather);
+    }
+  }, [weather, setCurrentWeather]);
+
+  const isFavorite = currentWeather && favorites.includes(currentWeather.name);
+
+  const toggleFavorite = () => {
+    if (!currentWeather) return;
+    
+    if (isFavorite) {
+      removeFavorite(currentWeather.name);
+      toast({
+        title: "Removed from favorites",
+        description: `${currentWeather.name} has been removed from your favorites.`,
+      });
+    } else {
+      addFavorite(currentWeather.name);
+      toast({
+        title: "Added to favorites",
+        description: `${currentWeather.name} has been added to your favorites.`,
+      });
+    }
+  };
 
   const fetchWeatherData = async (
     searchLocation: string,
@@ -42,15 +77,12 @@ export default function WeatherClient({
     setLoading(true);
     setFetchError(null);
     try {
-      let weatherData;
-      if (searchZipcode.trim()) {
-        weatherData = await weatherService.getWeatherByZipcode(searchZipcode);
-      } else {
-        weatherData = await weatherService.getWeatherByLocation(searchLocation);
-      }
-      const { weather, forecast } = weatherData as { weather: WeatherData, forecast: ForecastData };
-      setWeather(weather as any);
-      setForecast(forecast);
+      const weatherData = searchZipcode.trim()
+        ? await weatherService.getWeatherByZipcode(searchZipcode)
+        : await weatherService.getWeatherByLocation(searchLocation);
+
+      setWeather(weatherData.weather);
+      setForecast(weatherData.forecast);
 
       toast({
         title: "Weather Updated",
@@ -84,8 +116,7 @@ export default function WeatherClient({
     setFetchError(null);
 
     try {
-      const { weather, forecast } =
-        await weatherService.getCurrentLocationWeather();
+      const { weather, forecast } = await weatherService.getCurrentLocationWeather();
       setWeather(weather);
       setForecast(forecast);
       setLocation(weather.name);
@@ -106,90 +137,142 @@ export default function WeatherClient({
     }
   };
 
+  const handleFavoriteClick = (locationName: string) => {
+    setLocation(locationName);
+    fetchWeatherData(locationName, "");
+  };
+
   return (
-    <div className="container mx-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Left Column - Search and Current Weather */}
-        <div className="md:col-span-4 space-y-6">
-          {/* Header */}
-          <div className="flex items-center gap-2 mb-6">
-            <Cloud className="h-8 w-8 text-blue-500" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Weather Forecast
-            </h1>
-          </div>
-          <div className="flex justify-end">
-            <UnitToggle unit={unit} setUnit={setUnit} />
-          </div>
-
-          {/* Current Weather */}
-          {weather && (
-            <div className="border rounded-lg p-4">
-              <WeatherDisplay weather={weather} unit={unit} />
-            </div>
-          )}
-          {/* Location Selector */}
-          <LocationSelector
-            onLocationSelect={(cityName) => {
-              setLocation(cityName);
-              fetchWeatherData(cityName, "");
-            }}
-          />
-          {/* Search Form */}
-          <form onSubmit={handleSearch} className="space-y-4">
-            <div className="flex gap-2 items-center">
-              <div className="relative flex-1">
-                <Input
-                  type="text"
-                  placeholder="Enter city name..."
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full"
-                />
-                {loading && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-                )}
+    <div className="w-full min-h-screen dark:bg-gray-900">
+      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column - Weather Controls */}
+          <Card className="lg:col-span-4 h-full">
+            <CardHeader className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Cloud className="h-8 w-8 text-blue-500" />
+                  <CardTitle className="text-xl sm:text-2xl">Weather Forecast</CardTitle>
+                </div>
+                <UnitToggle unit={unit} setUnit={setUnit} />
               </div>
-              <div className="relative flex-1">
-                <Input
-                  type="text"
-                  placeholder="Enter zipcode..."
-                  value={zipcode}
-                  onChange={(e) => setZipcode(e.target.value)}
-                  className="w-full"
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              {/* Current Weather Card */}
+              {weather && (
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-700 shadow-sm rounded-lg">
+                  <CardContent className="p-4">
+                    <WeatherDisplay weather={weather} unit={unit} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Location Selector */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                <LocationSelector
+                  onLocationSelect={(cityName) => {
+                    setLocation(cityName);
+                    fetchWeatherData(cityName, "");
+                  }}
                 />
               </div>
-            </div>
-            <div className="flex gap-2 items-center">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="flex-1 flex items-center justify-center"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Search
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGeolocation}
-                disabled={loading}
-                className="flex-1 flex items-center justify-center"
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                Location
-              </Button>
-            </div>
-          </form>
-        </div>
 
-        {/* Right Column - Forecast */}
-        <div className="md:col-span-8">
-          {forecast && (
-            <div className="rounded-lg p-4 h-full">
-              <ForecastDisplay forecast={forecast} unit={unit} />
-            </div>
-          )}
+              {/* Search Form */}
+              <form onSubmit={handleSearch} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    type="text"
+                    placeholder="Enter city name..."
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Enter zipcode..."
+                    value={zipcode}
+                    onChange={(e) => setZipcode(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Search className="h-4 w-4 mr-2" />
+                    )}
+                    Search
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGeolocation}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Location
+                  </Button>
+                </div>
+              </form>
+
+              {/* Favorites Section */}
+              {currentWeather && (
+                <div className="pt-4 border-t dark:border-gray-700">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleFavorite}
+                    className="w-full justify-center hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    {isFavorite ? (
+                      <>
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-2" />
+                        Remove from favorites
+                      </>
+                    ) : (
+                      <>
+                        <StarOff className="h-4 w-4 mr-2" />
+                        Add to favorites
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {favorites.length > 0 && (
+                <div className="pt-4 border-t dark:border-gray-700">
+                  <h3 className="text-sm font-medium mb-3">Favorite Locations</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {favorites.map((locationName) => (
+                      <Button
+                        key={locationName}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFavoriteClick(locationName)}
+                        className="w-full text-xs sm:text-sm truncate"
+                      >
+                        {locationName}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Right Column - Forecast */}
+          <Card className="lg:col-span-8 h-full">
+            <CardContent className="p-4 sm:p-6">
+              {forecast && <ForecastDisplay forecast={forecast} unit={unit} />}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

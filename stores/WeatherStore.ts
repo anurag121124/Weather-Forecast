@@ -1,76 +1,31 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { WeatherData } from '@/types/weather'
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-interface WeatherStore {
-  // State
-  unit: 'metric' | 'imperial'
-  favorites: string[]
-  currentWeather: WeatherData | null
-  recentSearches: string[]
-  
-  // Actions
-  setUnit: (unit: 'metric' | 'imperial') => void
-  addFavorite: (location: string) => void
-  removeFavorite: (location: string) => void
-  setCurrentWeather: (weather: WeatherData) => void
-  addRecentSearch: (location: string) => void
-  clearRecentSearches: () => void
-  
-  // Computed
-  isFavorite: (location: string) => boolean
+interface UserPreferencesStore {
+  unit: "metric" | "imperial";
+  favoriteLocations: string[];
+  setUnit: (unit: "metric" | "imperial") => void;
+  addFavoriteLocation: (location: string) => void;
+  removeFavoriteLocation: (location: string) => void;
+  isFavorite: (location: string) => boolean;
 }
 
-export const useWeatherStore = create<WeatherStore>()(
+export const useUserPreferencesStore = create<UserPreferencesStore>()(
   persist(
     (set, get) => ({
-      // Initial state
-      unit: 'metric',
-      favorites: [],
-      currentWeather: null,
-      recentSearches: [],
-
-      // Actions
+      unit: "metric",
+      favoriteLocations: [],
       setUnit: (unit) => set({ unit }),
-
-      addFavorite: (location) => 
+      addFavoriteLocation: (location) =>
         set((state) => ({
-          favorites: Array.from(new Set([...state.favorites, location]))
+          favoriteLocations: Array.from(new Set([...state.favoriteLocations, location])),
         })),
-
-      removeFavorite: (location) =>
+      removeFavoriteLocation: (location) =>
         set((state) => ({
-          favorites: state.favorites.filter((fav) => fav !== location)
+          favoriteLocations: state.favoriteLocations.filter((fav) => fav !== location),
         })),
-
-      setCurrentWeather: (weather) =>
-        set({ currentWeather: weather }),
-
-      addRecentSearch: (location) =>
-        set((state) => {
-          const maxRecentSearches = 5
-          const filtered = state.recentSearches.filter((s) => s !== location)
-          return {
-            recentSearches: [location, ...filtered].slice(0, maxRecentSearches)
-          }
-        }),
-
-      clearRecentSearches: () =>
-        set({ recentSearches: [] }),
-
-      // Computed values
-      isFavorite: (location) => {
-        const state = get()
-        return state.favorites.includes(location)
-      },
+      isFavorite: (location) => get().favoriteLocations.includes(location),
     }),
-    {
-      name: 'weather-store',
-      partialize: (state) => ({
-        unit: state.unit,
-        favorites: state.favorites,
-        recentSearches: state.recentSearches,
-      }),
-    }
+    { name: "user-preferences" }
   )
-)
+);

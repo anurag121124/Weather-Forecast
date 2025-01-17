@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { WeatherData } from "@/types/weather";
 import {
   Cloud,
   CloudRain,
@@ -37,32 +38,17 @@ const getWeatherIcon = (code: number) => {
   return <Icon className={`h-12 w-12 ${color}`} />;
 };
 
-interface Weather {
-  main: {
-    temp: number;
-    feels_like: number;
-    humidity: number;
-    pressure: number;
-  };
-  weather: {
-    id: number;
-    description: string;
-  }[];
-  name: string;
-  wind: {
-    speed: number;
-  };
-}
+
 
 interface WeatherDisplayProps {
-  weather: Weather;
+  weather: WeatherData;
   unit: "metric" | "imperial";
 }
 
 export default function WeatherDisplay({ weather, unit }: WeatherDisplayProps) {
   if (!weather) return null;
 
-  const temp = Math.round(weather.main.temp);
+  const temp = Math.round(weather.main.temp || 0);
   const feelsLike = Math.round(weather.main.feels_like);
   const unitSymbol = unit === "metric" ? "°C" : "°F";
 

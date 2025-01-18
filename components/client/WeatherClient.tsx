@@ -11,7 +11,7 @@ import { UnitToggle } from "../UnitToggle";
 import WeatherDisplay from "../WeatherDisplay";
 import LocationSelector from "../LocationSelector";
 import { weatherService } from "@/services/weather.service";
-import { ForecastData, WeatherData } from "@/types/weather";
+import { WeatherData, ForecastData, WeatherServiceConfig } from "@/types/weather";
 import { useUserPreferencesStore } from "@/stores/WeatherStore";
 
 interface WeatherClientProps {
@@ -19,11 +19,15 @@ interface WeatherClientProps {
   initialForecast?: ForecastData;
 }
 
+interface WeatherResponse {
+  weather: WeatherData;
+  forecast: ForecastData;
+}
+
 export default function WeatherClient({
   initialWeather,
   initialForecast,
 }: WeatherClientProps) {
-  // State management
   const [location, setLocation] = useState("");
   const [zipcode, setZipcode] = useState("");
   const [weather, setWeather] = useState<WeatherData | null>(initialWeather || null);
@@ -43,29 +47,46 @@ export default function WeatherClient({
   } = useUserPreferencesStore();
 
   useEffect(() => {
-    weatherService.updateUnit(unit);
+    try {
+      const config: WeatherServiceConfig = { unit };
+      weatherService.updateUnit(config.unit);
+    } catch (error) {
+      handleError(error);
+    }
   }, [unit]);
 
-  // Load recent searches on mount
   useEffect(() => {
-    const searches = weatherService.getRecentSearches();
-    setRecentSearches(searches);
+    try {
+      const searches = weatherService.getRecentSearches();
+      setRecentSearches(searches);
+    } catch (error) {
+      handleError(error);
+    }
   }, []);
 
-  const updateWeatherState = (weatherData: WeatherData) => {
-    setWeather(weatherData);
-    if (weatherData.forecast) {
-      setForecast(weatherData.forecast as any);
+  const updateWeatherState = (response: WeatherResponse) => {
+    try {
+      const { weather: weatherData, forecast: forecastData } = response;
+      
+      setWeather(weatherData);
+      if (forecastData) {
+        setForecast(forecastData);
+      }
+      
+      setLocation(weatherData.name);
+      
+      const searches = weatherService.getRecentSearches();
+      setRecentSearches(searches);
+    } catch (error) {
+      handleError(error);
     }
-    setLocation(weatherData.name);
-    
-    // Update recent searches in state
-    const searches = weatherService.getRecentSearches();
-    setRecentSearches(searches);
   };
 
   const handleError = (error: unknown) => {
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : "An unexpected error occurred";
+    
     setFetchError(errorMessage);
     toast({
       variant: "destructive",
@@ -76,10 +97,11 @@ export default function WeatherClient({
 
   const fetchWeatherData = async (searchLocation: string, searchZipcode: string) => {
     if (!searchLocation.trim() && !searchZipcode.trim()) {
+      const error = new Error("Please enter a location or zipcode");
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please enter a location or zipcode",
+        description: error.message,
       });
       return;
     }
@@ -88,15 +110,19 @@ export default function WeatherClient({
     setFetchError(null);
 
     try {
-      const weatherData = searchZipcode
+      const response: WeatherResponse = searchZipcode
         ? await weatherService.getWeatherByZipcode(searchZipcode)
         : await weatherService.getWeatherByLocation(searchLocation);
-
-      updateWeatherState(weatherData);
       
+      if (!response.weather || !response.forecast) {
+        throw new Error('Invalid weather data format received');
+      }
+
+      updateWeatherState(response);
+
       toast({
         title: "Weather Updated",
-        description: `Weather information for ${weatherData.name} updated.`,
+        description: `Weather information for ${response.weather.name} updated.`,
       });
     } catch (err) {
       handleError(err);
@@ -105,22 +131,22 @@ export default function WeatherClient({
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    fetchWeatherData(location, zipcode);
+    await fetchWeatherData(location, zipcode);
   };
 
   const handleGeolocation = async () => {
     setLoading(true);
     setFetchError(null);
-
+    
     try {
-      const weatherData = await weatherService.getCurrentLocationWeather();
-      updateWeatherState(weatherData);
-      
+      const response = await weatherService.getCurrentLocationWeather();
+      updateWeatherState(response);
+
       toast({
         title: "Location Found",
-        description: `Showing weather for ${weatherData.name}`,
+        description: `Showing weather for ${response.weather.name}`,
       });
     } catch (err) {
       handleError(err);
@@ -131,29 +157,35 @@ export default function WeatherClient({
 
   const toggleFavorite = () => {
     if (!weather?.name) return;
-    
+
     const locationName = weather.name;
-    if (isFavorite(locationName)) {
-      removeFavoriteLocation(locationName);
-      toast({
-        title: "Removed from Favorites",
-        description: `${locationName} removed from your favorites.`,
-      });
-    } else {
-      addFavoriteLocation(locationName);
-      toast({
-        title: "Added to Favorites",
-        description: `${locationName} added to your favorites.`,
-      });
+
+    try {
+      if (isFavorite(locationName)) {
+        removeFavoriteLocation(locationName);
+        toast({
+          title: "Removed from Favorites",
+          description: `${locationName} removed from your favorites.`,
+        });
+      } else {
+        addFavoriteLocation(locationName);
+        toast({
+          title: "Added to Favorites",
+          description: `${locationName} added to your favorites.`,
+        });
+      }
+    } catch (error) {
+      handleError(error);
     }
   };
 
   const handleFavoriteClick = async (locationName: string) => {
     setLoading(true);
+    
     try {
-      const weatherData = await weatherService.getWeatherByLocation(locationName);
-      updateWeatherState(weatherData);
-      
+      const response = await weatherService.getWeatherByLocation(locationName);
+      updateWeatherState(response);
+
       toast({
         title: "Weather Updated",
         description: `Weather information for ${locationName} has been updated.`,
@@ -174,20 +206,20 @@ export default function WeatherClient({
     <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Search and Controls Card */}
           <Card className="lg:col-span-4 h-full">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Cloud className="h-8 w-8 text-blue-500" />
-                  <CardTitle className="text-xl sm:text-2xl">Weather Forecast</CardTitle>
+                  <CardTitle className="text-xl sm:text-2xl">
+                    Weather Forecast
+                  </CardTitle>
                 </div>
                 <UnitToggle unit={unit} setUnit={setUnit} />
               </div>
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {/* Current Weather Display */}
               {weather && (
                 <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-700 shadow-sm rounded-lg">
                   <CardContent className="p-4">
@@ -196,14 +228,10 @@ export default function WeatherClient({
                 </Card>
               )}
 
-              {/* Location Selector */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-                <LocationSelector
-                  onLocationSelect={handleLocationSelect}
-                />
+                <LocationSelector onLocationSelect={handleLocationSelect} />
               </div>
 
-              {/* Search Form */}
               <form onSubmit={handleSearch} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
@@ -226,11 +254,7 @@ export default function WeatherClient({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button 
-                    type="submit" 
-                    disabled={loading || (!location.trim() && !zipcode.trim())}
-                    className="w-full"
-                  >
+                  <Button type="submit" disabled={loading} className="w-full">
                     {loading ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (
@@ -251,14 +275,10 @@ export default function WeatherClient({
                 </div>
               </form>
 
-              {/* Error Display */}
               {fetchError && (
-                <div className="text-red-500 text-sm mt-2">
-                  {fetchError}
-                </div>
+                <div className="text-red-500 text-sm mt-2">{fetchError}</div>
               )}
 
-              {/* Favorite Toggle */}
               {weather?.name && (
                 <div className="pt-4 border-t dark:border-gray-700">
                   <Button
@@ -282,10 +302,11 @@ export default function WeatherClient({
                 </div>
               )}
 
-              {/* Favorites List */}
               {favorites.length > 0 && (
                 <div className="pt-4 border-t dark:border-gray-700">
-                  <h3 className="text-sm font-medium mb-3">Favorite Locations</h3>
+                  <h3 className="text-sm font-medium mb-3">
+                    Favorite Locations
+                  </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {favorites.map((locationName) => (
                       <Button
@@ -305,7 +326,6 @@ export default function WeatherClient({
             </CardContent>
           </Card>
 
-          {/* Forecast Display Card */}
           <Card className="lg:col-span-8 h-full">
             <CardContent className="p-4 sm:p-6">
               {forecast ? (

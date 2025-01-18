@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import ForecastDisplay from "../ForecastDisplay";
 import { UnitToggle } from "../UnitToggle";
 import WeatherDisplay from "../WeatherDisplay";
@@ -17,6 +18,8 @@ import {
   WeatherServiceConfig,
 } from "@/types/weather";
 import { useUserPreferencesStore } from "@/stores/WeatherStore";
+import { WeatherError } from "@/types/errors";
+import { handleNetworkError } from "@/lib/errorHandlers";
 
 interface WeatherClientProps {
   initialWeather?: WeatherData;
@@ -34,6 +37,7 @@ export default function WeatherClient({
 }: WeatherClientProps) {
   const [location, setLocation] = useState("");
   const [zipcode, setZipcode] = useState("");
+  const [error, setError] = useState<WeatherError | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(
     initialWeather || null
   );
@@ -43,6 +47,8 @@ export default function WeatherClient({
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   const { toast } = useToast();
   const {
@@ -53,6 +59,22 @@ export default function WeatherClient({
     removeFavoriteLocation,
     isFavorite,
   } = useUserPreferencesStore();
+
+  useEffect(() => {
+    setIsClient(true);
+    setIsOffline(!window.navigator.onLine);
+
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -72,6 +94,32 @@ export default function WeatherClient({
     }
   }, []);
 
+  const handleError = (error: unknown) => {
+    const weatherError = handleNetworkError(error);
+    setError(weatherError);
+    setFetchError(weatherError.message);
+    
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: weatherError.message,
+    });
+  };
+
+  const validateInput = (searchLocation: string, searchZipcode: string): boolean => {
+    if (!searchLocation.trim() && !searchZipcode.trim()) {
+      handleError(new Error("Please enter a location or zipcode"));
+      return false;
+    }
+
+    if (searchZipcode && !/^\d{5}(-\d{4})?$/.test(searchZipcode)) {
+      handleError(new Error("Please enter a valid ZIP code"));
+      return false;
+    }
+
+    return true;
+  };
+
   const updateWeatherState = (response: WeatherResponse) => {
     try {
       const { weather: weatherData, forecast: forecastData } = response;
@@ -90,36 +138,23 @@ export default function WeatherClient({
     }
   };
 
-  const handleError = (error: unknown) => {
-    const errorMessage =
-      error instanceof Error ? error.message : "An unexpected error occurred";
-
-    setFetchError(errorMessage);
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: errorMessage,
-    });
-  };
-
   const fetchWeatherData = async (
     searchLocation: string,
     searchZipcode: string
   ) => {
-    if (!searchLocation.trim() && !searchZipcode.trim()) {
-      const error = new Error("Please enter a location or zipcode");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
+    if (!validateInput(searchLocation, searchZipcode)) {
       return;
     }
 
     setLoading(true);
+    setError(null);
     setFetchError(null);
 
     try {
+      if (isOffline) {
+        throw new Error("No internet connection");
+      }
+
       const response: WeatherResponse = searchZipcode
         ? await weatherService.getWeatherByZipcode(searchZipcode)
         : await weatherService.getWeatherByLocation(searchLocation);
@@ -147,12 +182,26 @@ export default function WeatherClient({
   };
 
   const handleGeolocation = async () => {
-    setLoading(true);
+    setError(null);
     setFetchError(null);
+    setLoading(true);
 
     try {
+      if (!window.navigator.geolocation) {
+        throw new Error("Geolocation is not supported by your browser");
+      }
+
+      if (isOffline) {
+        throw new Error("Cannot get location while offline");
+      }
+
       const response = await weatherService.getCurrentLocationWeather();
-      updateWeatherState(response as any);
+      
+      if (!response?.weather || !response?.forecast) {
+        throw new Error("Invalid weather data received");
+      }
+
+      updateWeatherState(response);
 
       toast({
         title: "Location Found",
@@ -193,8 +242,17 @@ export default function WeatherClient({
     setLoading(true);
 
     try {
+      if (isOffline) {
+        throw new Error("Cannot update weather while offline");
+      }
+
       const response = await weatherService.getWeatherByLocation(locationName);
-      updateWeatherState(response as any);
+      
+      if (!response?.weather || !response?.forecast) {
+        throw new Error("Invalid weather data received");
+      }
+      
+      updateWeatherState(response);
 
       toast({
         title: "Weather Updated",
@@ -215,6 +273,17 @@ export default function WeatherClient({
   return (
     <div className="w-full min-h-screen dark:bg-gray-900">
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        {isClient && isOffline && (
+          <div className="mb-4">
+            <Alert variant="warning">
+              <AlertTitle>Offline Mode</AlertTitle>
+              <AlertDescription>
+                You are currently offline. Some features may be limited.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <Card className="lg:col-span-4 h-full">
             <CardHeader>
@@ -266,7 +335,7 @@ export default function WeatherClient({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || isOffline}
                     className="w-full bg-blue-700 hover:bg-blue-200"
                   >
                     {loading ? (
@@ -280,7 +349,7 @@ export default function WeatherClient({
                     type="button"
                     variant="outline"
                     onClick={handleGeolocation}
-                    disabled={loading}
+                    disabled={loading || isOffline}
                     className="w-full"
                   >
                     <MapPin className="h-4 w-4 mr-2" />
@@ -292,6 +361,7 @@ export default function WeatherClient({
               {fetchError && (
                 <div className="text-red-500 text-sm mt-2">{fetchError}</div>
               )}
+
               {weather?.name && (
                 <div className="pt-4 border-t dark:border-gray-700">
                   <Button
@@ -331,7 +401,7 @@ export default function WeatherClient({
                           size="sm"
                           onClick={() => handleFavoriteClick(locationName)}
                           className="flex-1 text-xs sm:text-sm truncate"
-                          disabled={loading}
+                          disabled={loading || isOffline}
                         >
                           {locationName}
                         </Button>

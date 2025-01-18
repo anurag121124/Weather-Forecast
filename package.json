@@ -49,7 +49,6 @@
     "country-state-city": "^3.2.1",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
-    "eslint": "8.49.0",
     "eslint-config-next": "13.5.1",
     "flowbite-react": "^0.10.2",
     "input-otp": "^1.2.4",
@@ -73,7 +72,12 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.18.0",
     "@types/chart.js": "^2.9.41",
-    "@types/react-chartjs-2": "^2.0.2"
+    "@types/react-chartjs-2": "^2.0.2",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.4",
+    "globals": "^15.14.0",
+    "typescript-eslint": "^8.20.0"
   }
 }

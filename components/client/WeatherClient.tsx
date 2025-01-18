@@ -11,7 +11,11 @@ import { UnitToggle } from "../UnitToggle";
 import WeatherDisplay from "../WeatherDisplay";
 import LocationSelector from "../LocationSelector";
 import { weatherService } from "@/services/weather.service";
-import { WeatherData, ForecastData, WeatherServiceConfig } from "@/types/weather";
+import {
+  WeatherData,
+  ForecastData,
+  WeatherServiceConfig,
+} from "@/types/weather";
 import { useUserPreferencesStore } from "@/stores/WeatherStore";
 
 interface WeatherClientProps {
@@ -30,8 +34,12 @@ export default function WeatherClient({
 }: WeatherClientProps) {
   const [location, setLocation] = useState("");
   const [zipcode, setZipcode] = useState("");
-  const [weather, setWeather] = useState<WeatherData | null>(initialWeather || null);
-  const [forecast, setForecast] = useState<ForecastData | null>(initialForecast || null);
+  const [weather, setWeather] = useState<WeatherData | null>(
+    initialWeather || null
+  );
+  const [forecast, setForecast] = useState<ForecastData | null>(
+    initialForecast || null
+  );
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -67,14 +75,14 @@ export default function WeatherClient({
   const updateWeatherState = (response: WeatherResponse) => {
     try {
       const { weather: weatherData, forecast: forecastData } = response;
-      
+
       setWeather(weatherData);
       if (forecastData) {
         setForecast(forecastData);
       }
-      
+
       setLocation(weatherData.name);
-      
+
       const searches = weatherService.getRecentSearches();
       setRecentSearches(searches);
     } catch (error) {
@@ -83,10 +91,9 @@ export default function WeatherClient({
   };
 
   const handleError = (error: unknown) => {
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : "An unexpected error occurred";
-    
+    const errorMessage =
+      error instanceof Error ? error.message : "An unexpected error occurred";
+
     setFetchError(errorMessage);
     toast({
       variant: "destructive",
@@ -95,7 +102,10 @@ export default function WeatherClient({
     });
   };
 
-  const fetchWeatherData = async (searchLocation: string, searchZipcode: string) => {
+  const fetchWeatherData = async (
+    searchLocation: string,
+    searchZipcode: string
+  ) => {
     if (!searchLocation.trim() && !searchZipcode.trim()) {
       const error = new Error("Please enter a location or zipcode");
       toast({
@@ -113,9 +123,9 @@ export default function WeatherClient({
       const response: WeatherResponse = searchZipcode
         ? await weatherService.getWeatherByZipcode(searchZipcode)
         : await weatherService.getWeatherByLocation(searchLocation);
-      
+
       if (!response.weather || !response.forecast) {
-        throw new Error('Invalid weather data format received');
+        throw new Error("Invalid weather data format received");
       }
 
       updateWeatherState(response);
@@ -139,10 +149,10 @@ export default function WeatherClient({
   const handleGeolocation = async () => {
     setLoading(true);
     setFetchError(null);
-    
+
     try {
       const response = await weatherService.getCurrentLocationWeather();
-      updateWeatherState(response);
+      updateWeatherState(response as any);
 
       toast({
         title: "Location Found",
@@ -181,10 +191,10 @@ export default function WeatherClient({
 
   const handleFavoriteClick = async (locationName: string) => {
     setLoading(true);
-    
+
     try {
       const response = await weatherService.getWeatherByLocation(locationName);
-      updateWeatherState(response);
+      updateWeatherState(response as any);
 
       toast({
         title: "Weather Updated",
@@ -203,7 +213,7 @@ export default function WeatherClient({
   };
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="w-full min-h-screen dark:bg-gray-900">
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <Card className="lg:col-span-4 h-full">
@@ -254,7 +264,11 @@ export default function WeatherClient({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button type="submit" disabled={loading} className="w-full">
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-blue-700 hover:bg-blue-200"
+                  >
                     {loading ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (
@@ -278,7 +292,6 @@ export default function WeatherClient({
               {fetchError && (
                 <div className="text-red-500 text-sm mt-2">{fetchError}</div>
               )}
-
               {weather?.name && (
                 <div className="pt-4 border-t dark:border-gray-700">
                   <Button
@@ -309,16 +322,39 @@ export default function WeatherClient({
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {favorites.map((locationName) => (
-                      <Button
+                      <div
                         key={locationName}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleFavoriteClick(locationName)}
-                        className="w-full text-xs sm:text-sm truncate"
-                        disabled={loading}
+                        className="flex items-center gap-2"
                       >
-                        {locationName}
-                      </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFavoriteClick(locationName)}
+                          className="flex-1 text-xs sm:text-sm truncate"
+                          disabled={loading}
+                        >
+                          {locationName}
+                        </Button>
+                        {isFavorite(locationName) ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFavoriteLocation(locationName)}
+                            className="text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            X
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => addFavoriteLocation(locationName)}
+                            className="text-green-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            Add
+                          </Button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>

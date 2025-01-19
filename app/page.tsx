@@ -1,5 +1,5 @@
-import WeatherClient from '@/components/client/WeatherClient';
-import { getWeatherData } from '@/lib/weather';
+import WeatherClient from '@/src/components/client/WeatherClient';
+import { getWeatherData } from '@/src/lib/weather';
 
 export default async function Home() {
   const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;

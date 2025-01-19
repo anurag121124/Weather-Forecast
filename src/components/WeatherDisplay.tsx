@@ -77,7 +77,7 @@ export default function WeatherDisplay({ weather, unit }: WeatherDisplayProps) {
             </p>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-2 ml-2">
             <p className="text-sm">
               Humidity: {weather.main.humidity}%
             </p>

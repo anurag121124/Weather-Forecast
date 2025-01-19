@@ -165,3 +165,46 @@ The project uses Tailwind CSS for styling. Configuration can be found in `tailwi
 
 
 For more information or support, please open an issue in the repository.
+
+
+
+
+
+
+
+
+Dear Hiring Team,
+
+I hope this email finds you well. I am writing to submit my completed assignment for the Weather Forecast Application as requested. I have implemented the required features and deployed the application successfully.
+
+Project Links:
+- Live Demo: https://weather-forecast-one-zeta.vercel.app/
+- GitHub Repository: https://github.com/anurag121124/Weather-Forecast
+
+Key Features Implemented:
+1. Location-based Weather Search
+   - City name search functionality
+   - Current weather conditions display
+   - 5-day forecast with detailed information
+
+2. Core Technical Requirements
+   - Next.js with TypeScript implementation
+   - Responsive design using Tailwind CSS
+   - Server-Side Rendering for initial data
+   - Client-Side Rendering for dynamic updates
+   - Error handling for various scenarios
+
+3. Additional Features
+   - Dark/Light mode toggle
+   - Clean and intuitive user interface
+   - Optimized performance
+   - Responsive layout for all devices
+
+The application has been thoroughly tested across different devices and browsers to ensure a consistent user experience.
+
+I look forward to your feedback and would be happy to discuss any aspects of the implementation or answer any questions you may have.
+
+Thank you for considering my submission.
+
+Best regards,
+Anurag Singh

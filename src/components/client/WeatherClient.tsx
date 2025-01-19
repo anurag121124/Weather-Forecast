@@ -21,6 +21,7 @@ import { WeatherError } from "@/src/types/errors";
 import { handleNetworkError } from "@/src/lib/errorHandlers";
 import { useUserPreferencesStore } from "@/src/stores/WeatherStore";
 import { WeatherResponse } from "@/src/types/weather";
+import { ThemeToggle } from "../toogle";
 
 interface WeatherClientProps {
   initialWeather?: WeatherData;
@@ -270,6 +271,8 @@ export default function WeatherClient({
                   </CardTitle>
                 </div>
                 <UnitToggle unit={unit} setUnit={setUnit} />
+                <ThemeToggle />
+
               </div>
             </CardHeader>
 

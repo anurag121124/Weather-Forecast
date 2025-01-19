@@ -207,7 +207,7 @@ const ForecastDisplay: React.FC<ForecastDisplayProps> = ({
             <div className="flex justify-center my-3 md:my-4">
               {getWeatherIcon(day.icon)}
             </div>
-            <p className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
+            <p className="text-base md:text-base font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
               {day.high}
               {unitSymbol}
               <span className="text-gray-400 dark:text-gray-500 mx-2">/</span>

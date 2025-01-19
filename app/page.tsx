@@ -9,7 +9,7 @@ export default async function Home() {
     const { weather, forecast } = await getWeatherData(defaultLocation, "metric");
 
     return (
-      <main className="min-h-screen  dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 p-4">
+      <main className="  dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 p-2">
         <WeatherClient initialWeather={weather} initialForecast={forecast} />
       </main>
     );

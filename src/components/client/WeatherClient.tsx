@@ -247,7 +247,7 @@ export default function WeatherClient({
   };
   return (
     <div className="w-full min-h-screen dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto">
         {isClient && isOffline && (
           <div className="mb-4">
             <Alert variant="default">

@@ -14,7 +14,6 @@ A modern weather application built with Next.js, TypeScript, and Tailwind CSS th
 - [Services](#services)
 - [Stores](#stores)
 - [Configuration](#configuration)
-- [License](#license)
 
 ## Introduction
 
@@ -33,8 +32,8 @@ This weather application provides users with real-time weather data, forecasts, 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/weather-app.git
-cd weather-app
+git clone https://github.com/anurag121124/Weather-Forecast.git
+cd Weather-Forecast
 ```
 
 2. Install dependencies:
@@ -164,10 +163,5 @@ NEXT_PUBLIC_API_URL=https://api.weatherservice.com
 
 The project uses Tailwind CSS for styling. Configuration can be found in `tailwind.config.ts`.
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
 
 For more information or support, please open an issue in the repository.
